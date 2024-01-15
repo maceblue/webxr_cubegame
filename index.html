@@ -74,7 +74,9 @@ var createScene = async function () {
     // Works when opening the url in the browser, but not in babylon
     
     soundUrl = "https://maceblue.github.io/webxr_cubegame/quiz-game-music-loop.mp3";
-
+    var music = new BABYLON.Sound("Violons", soundUrl, scene, null, { loop: true, autoplay: true });
+	
+    /*
     async function asyncSound(soundUrl){
         const response = await fetch(soundUrl);
         const arrayBuffer = await response.arrayBuffer();    
@@ -83,6 +85,7 @@ var createScene = async function () {
         });
     }
     asyncSound(soundUrl);
+    */
     
     
 
