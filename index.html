@@ -44,491 +44,484 @@
             }
         </style>
     </head>
-<body>
-    <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
-    <script>
-        var canvas = document.getElementById("renderCanvas");
-
-        var startRenderLoop = function (engine, canvas) {
-            engine.runRenderLoop(function () {
-                if (sceneToRender && sceneToRender.activeCamera) {
-                    sceneToRender.render();
-                }
-            });
-        }
-
-        var engine = null;
-        var scene = null;
-        var sceneToRender = null;
-        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-        const CUBE_SIZE = 4
-const CUBE_SCALING = 1.5
-const PLANE_SPACE = 0.1
-const pi = Math.PI; //for rotation
-
-var createScene = async function () {
-    engine.setStencilBuffer(true);
-    var scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color3(0, 0, 0);
-
-    // Works when opening the url in the browser, but not in babylon
-    
-    soundUrl = "https://maceblue.github.io/webxr_cubegame/quiz-game-music-loop.mp3";
-    var music = new BABYLON.Sound("Violons", soundUrl, scene, null, { loop: true, autoplay: true });
+    <body>
+	    <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
+	    <script>
+	        var canvas = document.getElementById("renderCanvas");
 	
-    /*
-    async function asyncSound(soundUrl){
-        const response = await fetch(soundUrl);
-        const arrayBuffer = await response.arrayBuffer();    
-        let sound = new BABYLON.Sound("sound", arrayBuffer, null, () => {
-            sound.play();
-        });
-    }
-    asyncSound(soundUrl);
-    */
-    
-    
+	        var startRenderLoop = function (engine, canvas) {
+	            engine.runRenderLoop(function () {
+	                if (sceneToRender && sceneToRender.activeCamera) {
+	                    sceneToRender.render();
+	                }
+	            });
+	        }
+	
+	        var engine = null;
+	        var scene = null;
+	        var sceneToRender = null;
+	        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+	        const CUBE_SIZE = 4
+			const CUBE_SCALING = 1.5
+			const PLANE_SPACE = 0.1
+			const pi = Math.PI; //for rotation
+	
+			var createScene = async function () {
+			    engine.setStencilBuffer(true);
+			    var scene = new BABYLON.Scene(engine);
+			    scene.clearColor = new BABYLON.Color3(0, 0, 0);
+			
+			    // Works when opening the url in the browser, but not in babylon
+			    soundUrl = "https://maceblue.github.io/webxr_cubegame/quiz-game-music-loop.mp3";
+			    var music = new BABYLON.Sound("background-loop", soundUrl, scene, null, { loop: true, autoplay: true });
+				
+			    /*
+			    async function asyncSound(soundUrl){
+			        const response = await fetch(soundUrl);
+			        const arrayBuffer = await response.arrayBuffer();    
+			        let sound = new BABYLON.Sound("sound", arrayBuffer, null, () => {
+			            sound.play();
+			        });
+			    }
+			    asyncSound(soundUrl);
+			    */
+			    
+			    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, 150), scene);
+			    camera.setTarget(BABYLON.Vector3.Zero());
+			
+			    var cubeGroup = new BABYLON.TransformNode("cubeGroup", scene);
+			    cubeGroup.position.z = 30;
+			
+			    var colorPlanes = [];
+			
+			    // rotation smoothness (keep this for later re-implementation)
+			    var clicked = false;
+			    var currentPosition = { x: 0, y: 0 };
+			    var currentRotation = { x: 0, y: 0 };
+			    //variables to set last angle and curr angle in each frame
+			    //so we can calculate angleDiff and use it for inertia
+			    var lastAngleDiff = { x: 0, y: 0 };
+			    var oldAngle = { x: 0, y: 0 };
+			    var newAngle = { x: 0, y: 0 };
+			    //variable to check whether mouse is moved or not in each frame
+			    var mousemov = false;
+			    //framecount reset and max framecount(secs) for inertia
+			    var framecount = 0;
+			    var mxframecount = 120; //4 secs at 60 fps
+			
+			    scene.beforeRender = function () {
+			        //set mousemov as false everytime before the rendering a frame
+			        mousemov = false;
+			    }
+			    scene.afterRender = function () { 
+			        //we are checking if the mouse is moved after the rendering a frame
+			        //will return false if the mouse is not moved in the last frame
+			        //possible drop of 1 frame of animation, which will not be noticed 
+			        //by the user most of the time
+			        if(!mousemov && framecount < mxframecount) {
+			            //divide the lastAngleDiff to slow or ease the animation
+			            lastAngleDiff.x = lastAngleDiff.x / 1.07;
+			            lastAngleDiff.y = lastAngleDiff.y / 1.07;
+			            //apply the rotation
+			            cubeGroup.rotation.x += lastAngleDiff.x;
+			            cubeGroup.rotation.y += lastAngleDiff.y
+			            //increase the framecount by 1
+			            //this doesnt make sense right now as it resets
+			            //after reaching max and continues in the loop
+			            //thinking of a way to fix it
+			            framecount++;
+			            currentRotation.x = cubeGroup.rotation.x;
+			            currentRotation.y = cubeGroup.rotation.y;
+			        } else if(framecount >= mxframecount) {
+			            framecount = 0;
+			        }
+			    }
+			       
+			    function swap_meshes(mesh1, mesh2) {
+			        mesh1.animations = []
+			        mesh2.animations = []
+			        mesh1.animations = create_swap_animations(mesh1, mesh2.position, mesh2.rotation)
+			        mesh2.animations = create_swap_animations(mesh2, mesh1.position, mesh1.rotation)
+			
+			        a = scene.beginAnimation(mesh1, 0, 20, false)
+			        b = scene.beginAnimation(mesh2, 0, 20, false)
+			
+			        a.onAnimationEnd = matches
+			        b.onAnimationEnd = matches
+			    }
+			
+			    function create_swap_animations(mesh, pos, rot) {
+			        var animation_swap_pos = new BABYLON.Animation("SwapAnimation", "position", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+			        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			        var keys = [];
+			        keys.push({
+			            frame: 0,
+			            value: mesh.position // position is Vector3
+			        });
+			        keys.push({
+			            frame: 20,
+			            value: pos
+			        });
+			        animation_swap_pos.setKeys(keys);
+			
+			        var animation_swap_rot = new BABYLON.Animation("SwapAnimation", "rotation", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+			        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			        var keys = [];
+			        keys.push({
+			            frame: 0,
+			            value: mesh.rotation 
+			        });
+			        keys.push({
+			            frame: 10,
+			            value: rot
+			        });
+			
+			        animation_swap_rot.setKeys(keys);
+			
+			        return [animation_swap_pos, animation_swap_rot];
+			    }
+			
+			    // Color Materials
+			    var redMat = new BABYLON.StandardMaterial("redMat", scene);
+			    redMat.emissiveColor = new BABYLON.Color3(0, 0.8, 1);
+			    redMat.disableLighting = true;
+			    var blueMat = new BABYLON.StandardMaterial("blueMat", scene);
+			    blueMat.emissiveColor = new BABYLON.Color3(0.84, 0, 0.95);
+			    blueMat.disableLighting = true;
+			    var greenMat = new BABYLON.StandardMaterial("greenMat", scene);
+			    greenMat.emissiveColor = new BABYLON.Color3(0, 1, 0);
+			    greenMat.disableLighting = true;
+			    var orangeMat = new BABYLON.StandardMaterial("orangeMat", scene);
+			    orangeMat.emissiveColor = new BABYLON.Color3(1, 0.57, 0);
+			    orangeMat.disableLighting = true;
+			    var yellowMat = new BABYLON.StandardMaterial("yellowMat", scene);
+			    yellowMat.emissiveColor = new BABYLON.Color3(1, 0.93, 0);
+			    yellowMat.disableLighting = true;
+			
+			    //const hl1 = new BABYLON.HighlightLayer("hl1", scene);
+			    //hl1.outerGlow = false;
+			
+			    var materials = [redMat, blueMat, greenMat, orangeMat, yellowMat];
+			
+			    function getRandomInt(max) {
+			        return Math.floor(Math.random() * max);
+			    }
+			
+			    function getRandomColor() {
+			        randInt = getRandomInt(materials.length);
+			
+			        return materials[randInt];
+			    }
+			
+			    // function to create a plane
+			    function createPlane(name, position, rotation) {
+			        const width = CUBE_SIZE;
+			        const depth = CUBE_SIZE;
+			        const radius = 1;
+			        const dTheta = Math.PI / 32
+			
+			        //Polygon shape in XoZ plane
+			        const shape = [];
+			
+			        //bottom left corner
+			        let centerX = -(0.5 * width - radius);
+			        let centerZ = -(0.5 * depth - radius);
+			        for (let theta = Math.PI; theta <= 1.5 * Math.PI; theta += dTheta) {
+			            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
+			        }
+			
+			        //bottom right corner
+			        centerX = 0.5 * width - radius;
+			        for (let theta = 1.5 * Math.PI; theta <= 2 * Math.PI; theta += dTheta) {
+			            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
+			        }
+			
+			        //top right corner
+			        centerZ = 0.5 * depth - radius;
+			        for (let theta = 0; theta <= 0.5 * Math.PI; theta += dTheta) {
+			            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
+			        }
+			
+			        //top left corner
+			        centerX = -(0.5 * width - radius);
+			        for (let theta = 0.5 * Math.PI; theta <= Math.PI; theta += dTheta) {
+			            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
+			        }
+			
+			        var plane = BABYLON.MeshBuilder.CreatePolygon(name, {shape:shape, sideOrientation: BABYLON.Mesh.DOUBLESIDE });
+			        //var plane = BABYLON.MeshBuilder.CreatePlane(name, { width: CUBE_SIZE, height: CUBE_SIZE }, scene);
+			        plane.position = position;
+			        plane.rotation = rotation;
+			        plane.material = getRandomColor();
+			        colorPlanes.push(plane);
+			        plane.parent = cubeGroup;
+			        //hl1.addMesh(plane, BABYLON.Color3.Black());
+			    }
+			
+			    var innerBox = BABYLON.MeshBuilder.CreateBox('innerBox', {width: CUBE_SIZE*4, height: CUBE_SIZE*4, depth: CUBE_SIZE*4})
+			    innerBox.parent = cubeGroup;
+			
+			    var posZbackWall = CUBE_SIZE*2 + PLANE_SPACE*4;
+			    var posZfrontWall = -CUBE_SIZE*2 - PLANE_SPACE;
+			    var posXleftWall = CUBE_SIZE*2 + PLANE_SPACE*4;
+			    var posXrightWall = -CUBE_SIZE*2 - PLANE_SPACE;
+			    var posYceiling = CUBE_SIZE*2 + PLANE_SPACE*4;
+			    var posYground = -CUBE_SIZE*2 - PLANE_SPACE;
+			
+			    for (let i = 0; i < 4; i++) {
+			        var posXbackWall = -(CUBE_SIZE*1.5) + i*CUBE_SIZE + i*PLANE_SPACE;
+			        var posXfrontWall = posXbackWall;
+			        var posZleftWall = posXfrontWall;
+			        var posZrightWall = posZleftWall;
+			        var posXground = posZrightWall;
+			        var posXceiling = posXground;
+			
+			        for (let j = 0; j < 4; j++) {
+			            var posYbackWall = -(CUBE_SIZE*1.5) + j*CUBE_SIZE + j*PLANE_SPACE;
+			            var posYfrontWall = posYbackWall;
+			            var posYleftWall = posYfrontWall;
+			            var posYrightWall = posYfrontWall;
+			            var posZground = posYrightWall;
+			            var posZceiling = posZground;
+			
+			            createPlane(`leftWall${i}/${j}`, new BABYLON.Vector3(posXleftWall, posYleftWall, posZleftWall), new BABYLON.Vector3(0, 0, -pi/2));
+			            createPlane(`rightWall${i}/${j}`, new BABYLON.Vector3(posXrightWall, posYrightWall, posZrightWall), new BABYLON.Vector3(0, 0, pi/2));
+			            createPlane(`frontWall${i}/${j}`, new BABYLON.Vector3(posXfrontWall, posYfrontWall, posZfrontWall), new BABYLON.Vector3(pi/2, 0, 0));
+			            createPlane(`backWall${i}/${j}`, new BABYLON.Vector3(posXbackWall, posYbackWall, posZbackWall), new BABYLON.Vector3(pi/2, 0, 0));
+			            createPlane(`ground${i}/${j}`, new BABYLON.Vector3(posXground, posYground, posZground), new BABYLON.Vector3(0, -pi/2, 0));
+			            createPlane(`ceiling${i}/${j}`, new BABYLON.Vector3(posXceiling, posYceiling, posZceiling), new BABYLON.Vector3(0, pi/2, 0));
+			        }
+			    }
+			    cubeGroup.scaling = new BABYLON.Vector3(CUBE_SCALING, CUBE_SCALING, CUBE_SCALING)
+			
+			    // selecting the planes
+			    var selectedMeshes = [];
+			
+			    scene.onReadyObservable.add( function(){
+			        matches();
+			        for (var i=0; i<colorPlanes.length; i++) {
+			            var mesh = colorPlanes[i];
+			            mesh.isPickable = true;
+			            mesh.actionManager = new BABYLON.ActionManager(scene);
+			
+			            mesh.actionManager.registerAction(
+			                new BABYLON.ExecuteCodeAction(
+			                    BABYLON.ActionManager.OnPickTrigger, function(evt) {
+			                        selectedMesh = evt.source;
+			                        // already selected so reset selection
+			                        if (selectedMeshes.includes(selectedMesh)) {
+			                            unset_selected(selectedMesh)
+			                            var index = selectedMeshes.indexOf(selectedMesh);
+			                            selectedMeshes.splice(index, 1);
+			                            return;
+			                        }
+			
+			                        if (selectedMeshes.length > 0) {
+			                            if (check_next(selectedMeshes[0], selectedMesh)) {
+			                                set_selected(selectedMesh);
+			                                selectedMeshes.push(selectedMesh);
+			                            }
+			                        } else {
+			                            set_selected(selectedMesh);
+			                            selectedMeshes.push(selectedMesh);
+			                        }
+			                        
+			                        // 2 meshes are selected
+			                        if (selectedMeshes.length > 1) {
+			                            // exchange colors
+			                            /*var color1 = selectedMeshes[0].material
+			                            var color2 = selectedMeshes[1].material
+			                            selectedMeshes[0].material = color2
+			                            selectedMeshes[1].material = color1*/
+			                            // animate exchange planes
+			                            swap_meshes(selectedMeshes[0], selectedMeshes[1])
+			                            // reset selection
+			                            unset_selected(selectedMeshes[0])
+			                            unset_selected(selectedMeshes[1])
+			                            selectedMeshes = [];
+			                        }
+			                    }
+			                )
+			            )
+			        } 
+			    });
+			
+			    function set_selected(mesh) {
+			        mesh.overlayAlpha = 0.5;
+			        mesh.overlayColor = BABYLON.Color3.White();
+			        mesh.renderOverlay = true;
+			        mesh.outlineWidth = 0.6;
+			        mesh.outlineColor = BABYLON.Color3.White();
+			        mesh.renderOutline = true;
+			    }
+			    function unset_selected(mesh) {
+			        mesh.outlineWidth = 0
+			        mesh.outlineColor = null
+			        mesh.renderOutline = false
+			        mesh.renderOverlay = false
+			    }
+			
+			    function check_next(mesh1, mesh2) {
+			        var dist = BABYLON.Vector3.Distance(mesh1.position, mesh2.position)
+			        if (dist <= CUBE_SIZE+PLANE_SPACE) {
+			            if (mesh1.position.x == mesh2.position.x || mesh1.position.y == mesh2.position.y) {
+			                return true
+			            }
+			        }
+			        return false
+			    }
+			
+			    var matches3 = []
+			    var matches = function () {
+			        for (var i=0; i<colorPlanes.length; i++) {
+			            var mesh = colorPlanes[i];
+			            if (matches3.includes(mesh)) {
+			                continue
+			            }
+			            for (var j=0; j<colorPlanes.length; j++) {
+			                if (mesh == colorPlanes[j]) {
+			                    continue;
+			                }
+			                if (!check_next(mesh, colorPlanes[j])) {
+			                    continue;
+			                }
+			                if (mesh.material == colorPlanes[j].material) {
+			                    // now we have 2 planes next to each other with same color, check more
+			                    more_matches(mesh, colorPlanes[j])
+			                }
+			            }
+			        }
+			    }
+			
+			    function more_matches(mesh1, mesh2) {
+			        if (mesh1.position.x == mesh2.position.x) {
+			            var direction = 'x';
+			        } else if (mesh1.position.y == mesh2.position.y) {
+			            var direction = 'y';
+			        } else {
+			            var direction = 'z';
+			        }
+			        for (var i=0; i<colorPlanes.length; i++) {
+			            mesh3 = null
+			            if (mesh1 == colorPlanes[i] || mesh2 == colorPlanes[i]) {
+			                continue;
+			            }
+			            if (!check_next(mesh1, colorPlanes[i]) && !check_next(mesh2, colorPlanes[i])) {
+			                continue;
+			            }
+			            if (mesh1.material != colorPlanes[i].material) {
+			                continue;
+			            }
+			            if ((direction == 'x' && mesh1.position.x == colorPlanes[i].position.x)
+			             || (direction == 'y' && mesh1.position.y == colorPlanes[i].position.y)
+			             || (direction == 'z' && mesh1.position.z == colorPlanes[i].position.z)
+			            ) {
+			                // now we have 3 planes next to each other with same color and same direction, check more
+			                mesh3 = colorPlanes[i]
+			                console.log('direction',direction)
+			                console.log('mesh1', mesh1.position)
+			                console.log('mesh2', mesh2.position)
+			                console.log('mesh3', mesh3.position)
+			                matches3.push(mesh1)
+			                matches3.push(mesh2)
+			                matches3.push(mesh3)
+			                set_selected(mesh1)
+			                set_selected(mesh2)
+			                set_selected(mesh3)
+			
+			                return
+			            }
+			        }
+			    }
+			
+			    // rotation with mouse
+			    scene.onPointerObservable.add((pointerInfo) => {
+			        switch (pointerInfo.type) {
+			            case BABYLON.PointerEventTypes.POINTERDOWN:
+			                currentPosition.x = pointerInfo.event.clientX;
+			                currentPosition.y = pointerInfo.event.clientY;
+			                currentRotation.x = cubeGroup.rotation.x;
+			                currentRotation.y = cubeGroup.rotation.y;
+			                clicked = true;
+			                break;
+			            case BABYLON.PointerEventTypes.POINTERMOVE:
+			                if (clicked) {
+			                    //set mousemov as true if the pointer is still down and moved
+			                    mousemov = true;
+			                }
+			                if (!clicked) {
+			                    return;
+			                }
+			                //set last angle before changing the rotation
+			                oldAngle.x = cubeGroup.rotation.x;
+			                oldAngle.y = cubeGroup.rotation.y;
+			                //rotate the mesh
+			                cubeGroup.rotation.y -= (pointerInfo.event.clientX - currentPosition.x) / 300.0;
+			                cubeGroup.rotation.x += (pointerInfo.event.clientY - currentPosition.y) / 300.0;
+			                //set the current angle after the rotation
+			                newAngle.x = cubeGroup.rotation.x;
+			                newAngle.y = cubeGroup.rotation.y;
+			                //calculate the anglediff
+			                lastAngleDiff.x = newAngle.x - oldAngle.x;
+			                lastAngleDiff.y = newAngle.y - oldAngle.y;
+			                currentPosition.x = pointerInfo.event.clientX;
+			                currentPosition.y = pointerInfo.event.clientY;
+			                break;    
+			            case BABYLON.PointerEventTypes.POINTERUP:
+			                clicked = false;
+			                break;    
+			        }
+			    });
+			
+			
+			    // WebXR immersive stuff
+			    var xrHelper = await scene.createDefaultXRExperienceAsync({
+			        uiOptions: {
+			            sessionMode: "immersive-vr",
+			            referenceSpaceType: "local-floor"
+			        },
+			        optionalFeatures: true,
+			        disableTeleportation: true,
+			    });
+			
+			    
+			    // move object with joystick on WebXR
+			    var rotSpeed = 0.05
+			    xrHelper.input.onControllerAddedObservable.add((controller) => {
+			        controller.onMotionControllerInitObservable.add((motionController) => {
+			            const xr_ids = motionController.getComponentIds();
+			            let thumbstickComponent = motionController.getComponent(xr_ids[2]);//xr-standard-thumbstick
+			            thumbstickComponent.onAxisValueChangedObservable.add((axes) => {
+			                cubeGroup.rotation.y -= axes.x * rotSpeed
+			                cubeGroup.rotation.x -= axes.y * rotSpeed
+			            });
+			        });
+			    });
+			
+			    return scene;
+			}
 
-    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, 150), scene);
-    camera.setTarget(BABYLON.Vector3.Zero());
-
-    var cubeGroup = new BABYLON.TransformNode("cubeGroup", scene);
-    cubeGroup.position.z = 30;
-
-    var colorPlanes = [];
-
-    // rotation smoothness (keep this for later re-implementation)
-    var clicked = false;
-    var currentPosition = { x: 0, y: 0 };
-    var currentRotation = { x: 0, y: 0 };
-    //variables to set last angle and curr angle in each frame
-    //so we can calculate angleDiff and use it for inertia
-    var lastAngleDiff = { x: 0, y: 0 };
-    var oldAngle = { x: 0, y: 0 };
-    var newAngle = { x: 0, y: 0 };
-    //variable to check whether mouse is moved or not in each frame
-    var mousemov = false;
-    //framecount reset and max framecount(secs) for inertia
-    var framecount = 0;
-    var mxframecount = 120; //4 secs at 60 fps
-
-    scene.beforeRender = function () {
-        //set mousemov as false everytime before the rendering a frame
-        mousemov = false;
-    }
-    scene.afterRender = function () { 
-        //we are checking if the mouse is moved after the rendering a frame
-        //will return false if the mouse is not moved in the last frame
-        //possible drop of 1 frame of animation, which will not be noticed 
-        //by the user most of the time
-        if(!mousemov && framecount < mxframecount) {
-            //divide the lastAngleDiff to slow or ease the animation
-            lastAngleDiff.x = lastAngleDiff.x / 1.07;
-            lastAngleDiff.y = lastAngleDiff.y / 1.07;
-            //apply the rotation
-            cubeGroup.rotation.x += lastAngleDiff.x;
-            cubeGroup.rotation.y += lastAngleDiff.y
-            //increase the framecount by 1
-            //this doesnt make sense right now as it resets
-            //after reaching max and continues in the loop
-            //thinking of a way to fix it
-            framecount++;
-            currentRotation.x = cubeGroup.rotation.x;
-            currentRotation.y = cubeGroup.rotation.y;
-        } else if(framecount >= mxframecount) {
-            framecount = 0;
-        }
-    }
-       
-    function swap_meshes(mesh1, mesh2) {
-        mesh1.animations = []
-        mesh2.animations = []
-        mesh1.animations = create_swap_animations(mesh1, mesh2.position, mesh2.rotation)
-        mesh2.animations = create_swap_animations(mesh2, mesh1.position, mesh1.rotation)
-
-        a = scene.beginAnimation(mesh1, 0, 20, false)
-        b = scene.beginAnimation(mesh2, 0, 20, false)
-
-        a.onAnimationEnd = matches
-        b.onAnimationEnd = matches
-    }
-
-    function create_swap_animations(mesh, pos, rot) {
-        var animation_swap_pos = new BABYLON.Animation("SwapAnimation", "position", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-        var keys = [];
-        keys.push({
-            frame: 0,
-            value: mesh.position // position is Vector3
-        });
-        keys.push({
-            frame: 20,
-            value: pos
-        });
-        animation_swap_pos.setKeys(keys);
-
-        var animation_swap_rot = new BABYLON.Animation("SwapAnimation", "rotation", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-        var keys = [];
-        keys.push({
-            frame: 0,
-            value: mesh.rotation 
-        });
-        keys.push({
-            frame: 10,
-            value: rot
-        });
-
-        animation_swap_rot.setKeys(keys);
-
-        return [animation_swap_pos, animation_swap_rot];
-    }
-
-    // Color Materials
-    var redMat = new BABYLON.StandardMaterial("redMat", scene);
-    redMat.emissiveColor = new BABYLON.Color3(0, 0.8, 1);
-    redMat.disableLighting = true;
-    var blueMat = new BABYLON.StandardMaterial("blueMat", scene);
-    blueMat.emissiveColor = new BABYLON.Color3(0.84, 0, 0.95);
-    blueMat.disableLighting = true;
-    var greenMat = new BABYLON.StandardMaterial("greenMat", scene);
-    greenMat.emissiveColor = new BABYLON.Color3(0, 1, 0);
-    greenMat.disableLighting = true;
-    var orangeMat = new BABYLON.StandardMaterial("orangeMat", scene);
-    orangeMat.emissiveColor = new BABYLON.Color3(1, 0.57, 0);
-    orangeMat.disableLighting = true;
-    var yellowMat = new BABYLON.StandardMaterial("yellowMat", scene);
-    yellowMat.emissiveColor = new BABYLON.Color3(1, 0.93, 0);
-    yellowMat.disableLighting = true;
-
-    //const hl1 = new BABYLON.HighlightLayer("hl1", scene);
-    //hl1.outerGlow = false;
-
-    var materials = [redMat, blueMat, greenMat, orangeMat, yellowMat];
-
-    function getRandomInt(max) {
-        return Math.floor(Math.random() * max);
-    }
-
-    function getRandomColor() {
-        randInt = getRandomInt(materials.length);
-
-        return materials[randInt];
-    }
-
-    // function to create a plane
-    function createPlane(name, position, rotation) {
-        const width = CUBE_SIZE;
-        const depth = CUBE_SIZE;
-        const radius = 1;
-        const dTheta = Math.PI / 32
-
-        //Polygon shape in XoZ plane
-        const shape = [];
-
-        //bottom left corner
-        let centerX = -(0.5 * width - radius);
-        let centerZ = -(0.5 * depth - radius);
-        for (let theta = Math.PI; theta <= 1.5 * Math.PI; theta += dTheta) {
-            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
-        }
-
-        //bottom right corner
-        centerX = 0.5 * width - radius;
-        for (let theta = 1.5 * Math.PI; theta <= 2 * Math.PI; theta += dTheta) {
-            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
-        }
-
-        //top right corner
-        centerZ = 0.5 * depth - radius;
-        for (let theta = 0; theta <= 0.5 * Math.PI; theta += dTheta) {
-            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
-        }
-
-        //top left corner
-        centerX = -(0.5 * width - radius);
-        for (let theta = 0.5 * Math.PI; theta <= Math.PI; theta += dTheta) {
-            shape.push(new BABYLON.Vector3(centerX + radius * Math.cos(theta), 0, centerZ + radius * Math.sin(theta)));
-        }
-
-        var plane = BABYLON.MeshBuilder.CreatePolygon(name, {shape:shape, sideOrientation: BABYLON.Mesh.DOUBLESIDE });
-        //var plane = BABYLON.MeshBuilder.CreatePlane(name, { width: CUBE_SIZE, height: CUBE_SIZE }, scene);
-        plane.position = position;
-        plane.rotation = rotation;
-        plane.material = getRandomColor();
-        colorPlanes.push(plane);
-        plane.parent = cubeGroup;
-        //hl1.addMesh(plane, BABYLON.Color3.Black());
-    }
-
-    var innerBox = BABYLON.MeshBuilder.CreateBox('innerBox', {width: CUBE_SIZE*4, height: CUBE_SIZE*4, depth: CUBE_SIZE*4})
-    innerBox.parent = cubeGroup;
-
-    var posZbackWall = CUBE_SIZE*2 + PLANE_SPACE*4;
-    var posZfrontWall = -CUBE_SIZE*2 - PLANE_SPACE;
-    var posXleftWall = CUBE_SIZE*2 + PLANE_SPACE*4;
-    var posXrightWall = -CUBE_SIZE*2 - PLANE_SPACE;
-    var posYceiling = CUBE_SIZE*2 + PLANE_SPACE*4;
-    var posYground = -CUBE_SIZE*2 - PLANE_SPACE;
-
-    for (let i = 0; i < 4; i++) {
-        var posXbackWall = -(CUBE_SIZE*1.5) + i*CUBE_SIZE + i*PLANE_SPACE;
-        var posXfrontWall = posXbackWall;
-        var posZleftWall = posXfrontWall;
-        var posZrightWall = posZleftWall;
-        var posXground = posZrightWall;
-        var posXceiling = posXground;
-
-        for (let j = 0; j < 4; j++) {
-            var posYbackWall = -(CUBE_SIZE*1.5) + j*CUBE_SIZE + j*PLANE_SPACE;
-            var posYfrontWall = posYbackWall;
-            var posYleftWall = posYfrontWall;
-            var posYrightWall = posYfrontWall;
-            var posZground = posYrightWall;
-            var posZceiling = posZground;
-
-            createPlane(`leftWall${i}/${j}`, new BABYLON.Vector3(posXleftWall, posYleftWall, posZleftWall), new BABYLON.Vector3(0, 0, -pi/2));
-            createPlane(`rightWall${i}/${j}`, new BABYLON.Vector3(posXrightWall, posYrightWall, posZrightWall), new BABYLON.Vector3(0, 0, pi/2));
-            createPlane(`frontWall${i}/${j}`, new BABYLON.Vector3(posXfrontWall, posYfrontWall, posZfrontWall), new BABYLON.Vector3(pi/2, 0, 0));
-            createPlane(`backWall${i}/${j}`, new BABYLON.Vector3(posXbackWall, posYbackWall, posZbackWall), new BABYLON.Vector3(pi/2, 0, 0));
-            createPlane(`ground${i}/${j}`, new BABYLON.Vector3(posXground, posYground, posZground), new BABYLON.Vector3(0, -pi/2, 0));
-            createPlane(`ceiling${i}/${j}`, new BABYLON.Vector3(posXceiling, posYceiling, posZceiling), new BABYLON.Vector3(0, pi/2, 0));
-        }
-    }
-    cubeGroup.scaling = new BABYLON.Vector3(CUBE_SCALING, CUBE_SCALING, CUBE_SCALING)
-
-    // selecting the planes
-    var selectedMeshes = [];
-
-    scene.onReadyObservable.add( function(){
-        matches();
-        for (var i=0; i<colorPlanes.length; i++) {
-            var mesh = colorPlanes[i];
-            mesh.isPickable = true;
-            mesh.actionManager = new BABYLON.ActionManager(scene);
-
-            mesh.actionManager.registerAction(
-                new BABYLON.ExecuteCodeAction(
-                    BABYLON.ActionManager.OnPickTrigger, function(evt) {
-                        selectedMesh = evt.source;
-                        // already selected so reset selection
-                        if (selectedMeshes.includes(selectedMesh)) {
-                            unset_selected(selectedMesh)
-                            var index = selectedMeshes.indexOf(selectedMesh);
-                            selectedMeshes.splice(index, 1);
-                            return;
-                        }
-
-                        if (selectedMeshes.length > 0) {
-                            if (check_next(selectedMeshes[0], selectedMesh)) {
-                                set_selected(selectedMesh);
-                                selectedMeshes.push(selectedMesh);
-                            }
-                        } else {
-                            set_selected(selectedMesh);
-                            selectedMeshes.push(selectedMesh);
-                        }
-                        
-                        // 2 meshes are selected
-                        if (selectedMeshes.length > 1) {
-                            // exchange colors
-                            /*var color1 = selectedMeshes[0].material
-                            var color2 = selectedMeshes[1].material
-                            selectedMeshes[0].material = color2
-                            selectedMeshes[1].material = color1*/
-                            // animate exchange planes
-                            swap_meshes(selectedMeshes[0], selectedMeshes[1])
-                            // reset selection
-                            unset_selected(selectedMeshes[0])
-                            unset_selected(selectedMeshes[1])
-                            selectedMeshes = [];
-                        }
-                    }
-                )
-            )
-        } 
-    });
-
-    function set_selected(mesh) {
-        mesh.overlayAlpha = 0.5;
-        mesh.overlayColor = BABYLON.Color3.White();
-        mesh.renderOverlay = true;
-        mesh.outlineWidth = 0.6;
-        mesh.outlineColor = BABYLON.Color3.White();
-        mesh.renderOutline = true;
-    }
-    function unset_selected(mesh) {
-        mesh.outlineWidth = 0
-        mesh.outlineColor = null
-        mesh.renderOutline = false
-        mesh.renderOverlay = false
-    }
-
-    function check_next(mesh1, mesh2) {
-        var dist = BABYLON.Vector3.Distance(mesh1.position, mesh2.position)
-        if (dist <= CUBE_SIZE+PLANE_SPACE) {
-            if (mesh1.position.x == mesh2.position.x || mesh1.position.y == mesh2.position.y) {
-                return true
-            }
-        }
-        return false
-    }
-
-    var matches3 = []
-    var matches = function () {
-        for (var i=0; i<colorPlanes.length; i++) {
-            var mesh = colorPlanes[i];
-            if (matches3.includes(mesh)) {
-                continue
-            }
-            for (var j=0; j<colorPlanes.length; j++) {
-                if (mesh == colorPlanes[j]) {
-                    continue;
-                }
-                if (!check_next(mesh, colorPlanes[j])) {
-                    continue;
-                }
-                if (mesh.material == colorPlanes[j].material) {
-                    // now we have 2 planes next to each other with same color, check more
-                    more_matches(mesh, colorPlanes[j])
-                }
-            }
-        }
-    }
-
-    function more_matches(mesh1, mesh2) {
-        if (mesh1.position.x == mesh2.position.x) {
-            var direction = 'x';
-        } else if (mesh1.position.y == mesh2.position.y) {
-            var direction = 'y';
-        } else {
-            var direction = 'z';
-        }
-        for (var i=0; i<colorPlanes.length; i++) {
-            mesh3 = null
-            if (mesh1 == colorPlanes[i] || mesh2 == colorPlanes[i]) {
-                continue;
-            }
-            if (!check_next(mesh1, colorPlanes[i]) && !check_next(mesh2, colorPlanes[i])) {
-                continue;
-            }
-            if (mesh1.material != colorPlanes[i].material) {
-                continue;
-            }
-            if ((direction == 'x' && mesh1.position.x == colorPlanes[i].position.x)
-             || (direction == 'y' && mesh1.position.y == colorPlanes[i].position.y)
-             || (direction == 'z' && mesh1.position.z == colorPlanes[i].position.z)
-            ) {
-                // now we have 3 planes next to each other with same color and same direction, check more
-                mesh3 = colorPlanes[i]
-                console.log('direction',direction)
-                console.log('mesh1', mesh1.position)
-                console.log('mesh2', mesh2.position)
-                console.log('mesh3', mesh3.position)
-                matches3.push(mesh1)
-                matches3.push(mesh2)
-                matches3.push(mesh3)
-                set_selected(mesh1)
-                set_selected(mesh2)
-                set_selected(mesh3)
-
-                return
-            }
-        }
-    }
-
-    // rotation with mouse
-    scene.onPointerObservable.add((pointerInfo) => {
-        switch (pointerInfo.type) {
-            case BABYLON.PointerEventTypes.POINTERDOWN:
-                currentPosition.x = pointerInfo.event.clientX;
-                currentPosition.y = pointerInfo.event.clientY;
-                currentRotation.x = cubeGroup.rotation.x;
-                currentRotation.y = cubeGroup.rotation.y;
-                clicked = true;
-                break;
-            case BABYLON.PointerEventTypes.POINTERMOVE:
-                if (clicked) {
-                    //set mousemov as true if the pointer is still down and moved
-                    mousemov = true;
-                }
-                if (!clicked) {
-                    return;
-                }
-                //set last angle before changing the rotation
-                oldAngle.x = cubeGroup.rotation.x;
-                oldAngle.y = cubeGroup.rotation.y;
-                //rotate the mesh
-                cubeGroup.rotation.y -= (pointerInfo.event.clientX - currentPosition.x) / 300.0;
-                cubeGroup.rotation.x += (pointerInfo.event.clientY - currentPosition.y) / 300.0;
-                //set the current angle after the rotation
-                newAngle.x = cubeGroup.rotation.x;
-                newAngle.y = cubeGroup.rotation.y;
-                //calculate the anglediff
-                lastAngleDiff.x = newAngle.x - oldAngle.x;
-                lastAngleDiff.y = newAngle.y - oldAngle.y;
-                currentPosition.x = pointerInfo.event.clientX;
-                currentPosition.y = pointerInfo.event.clientY;
-                break;    
-            case BABYLON.PointerEventTypes.POINTERUP:
-                clicked = false;
-                break;    
-        }
-    });
-
-
-    // WebXR immersive stuff
-    var xrHelper = await scene.createDefaultXRExperienceAsync({
-        uiOptions: {
-            sessionMode: "immersive-vr",
-            referenceSpaceType: "local-floor"
-        },
-        optionalFeatures: true,
-        disableTeleportation: true,
-    });
-
-    
-    // move object with joystick on WebXR
-    var rotSpeed = 0.05
-    xrHelper.input.onControllerAddedObservable.add((controller) => {
-        controller.onMotionControllerInitObservable.add((motionController) => {
-            const xr_ids = motionController.getComponentIds();
-            let thumbstickComponent = motionController.getComponent(xr_ids[2]);//xr-standard-thumbstick
-            thumbstickComponent.onAxisValueChangedObservable.add((axes) => {
-                cubeGroup.rotation.y -= axes.x * rotSpeed
-                cubeGroup.rotation.x -= axes.y * rotSpeed
-            });
-        });
-    });
-
-    return scene;
-}
-
-                window.initFunction = async function() {
-                    
-                    
-                    
-                    var asyncEngineCreation = async function() {
-                        try {
-                        return createDefaultEngine();
-                        } catch(e) {
-                        console.log("the available createEngine function failed. Creating the default engine instead");
-                        return createDefaultEngine();
-                        }
-                    }
-
-                    window.engine = await asyncEngineCreation();
-        if (!engine) throw 'engine should not be null.';
-        startRenderLoop(engine, canvas);
-        window.scene = createScene();};
-        initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });
-                            
-        });
-
-        // Resize
-        window.addEventListener("resize", function () {
-            engine.resize();
-        });
-    </script>
-</body>
+	        window.initFunction = async function() {
+		    var asyncEngineCreation = async function() {
+	            	try {
+			    return createDefaultEngine();
+	                } catch(e) {
+	                     console.log("the available createEngine function failed. Creating the default engine instead");
+	                     return createDefaultEngine();
+	                }
+	            }
+	
+	            window.engine = await asyncEngineCreation();
+	            if (!engine) throw 'engine should not be null.';
+	            startRenderLoop(engine, canvas);
+	            window.scene = createScene();};
+	            initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });               
+	        });
+	
+	        // Resize
+	        window.addEventListener("resize", function () {
+	            engine.resize();
+	        });
+    	</script>
+	</body>
 </html>
