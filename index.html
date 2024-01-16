@@ -364,7 +364,10 @@
 			    function check_next(mesh1, mesh2) {
 			        var dist = BABYLON.Vector3.Distance(mesh1.position, mesh2.position)
 			        if (dist <= CUBE_SIZE+PLANE_SPACE) {
-			            if (mesh1.position.x == mesh2.position.x || mesh1.position.y == mesh2.position.y) {
+			            if (mesh1.position.x == mesh2.position.x 
+					|| mesh1.position.y == mesh2.position.y
+					|| mesh1.position.z == mesh2.position.z
+				    ) {
 			                return true
 			            }
 			        }
