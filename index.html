@@ -351,20 +351,20 @@
 			    });
 			
 			    function set_selected(mesh) {
-			        mesh.overlayAlpha = 0.5;
+			        /*mesh.overlayAlpha = 0.5;
 			        mesh.overlayColor = BABYLON.Color3.White();
 			        mesh.renderOverlay = true;
 			        mesh.outlineWidth = 0.6;
 			        mesh.outlineColor = BABYLON.Color3.White();
-			        mesh.renderOutline = true;
-					gl.addIncludedOnlyMesh(mesh);
+			        mesh.renderOutline = true;*/
+				gl.addIncludedOnlyMesh(mesh);
 			    }
 			    function unset_selected(mesh) {
-			        mesh.outlineWidth = 0
+			        /*mesh.outlineWidth = 0
 			        mesh.outlineColor = null
 			        mesh.renderOutline = false
-			        mesh.renderOverlay = false
-					gl.addExcludedMesh(mesh);
+			        mesh.renderOverlay = false*/
+				gl.removeIncludedOnlyMesh(mesh);
 			    }
 			
 			    function check_next(mesh1, mesh2) {
