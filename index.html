@@ -152,7 +152,6 @@
 
 				function handle_matches_found(matches) {
 					for (let i = 0; i <= matches.length; i++) {
-						matches[i].animations = []
 						matches_animation = create_matches_animation(matches[i])
 						matches[i].animations.push(matches_animation)
 						a = scene.beginAnimation(matches[i], 0, 20, false)
