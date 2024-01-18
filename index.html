@@ -96,11 +96,47 @@
 			    asyncSound(soundUrl);
 			    */
 			    
-			    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, 150), scene);
+			    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, 120), scene);
 			    camera.setTarget(BABYLON.Vector3.Zero());
 			
 			    var cubeGroup = new BABYLON.TransformNode("cubeGroup", scene);
 			    cubeGroup.position.z = 30;
+
+				var score = 0;
+
+                // GUI
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    var panel = new BABYLON.GUI.StackPanel();   
+    panel.name = "mainVertStack";
+    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
+     panel.widthInPixels = 600;
+    // panel.heightInPixels = 200;
+    advancedTexture.addControl(panel);  
+    var scoreLabel = new BABYLON.GUI.TextBlock("scoreLabel", "Score:");
+    scoreLabel.widthInPixels = 300;
+    scoreLabel.heightInPixels = 100;
+    scoreLabel.fontSizeInPixels = 60;
+    scoreLabel.color = "white";
+    scoreLabel.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    // scoreLabel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    scoreLabel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
+    scoreLabel.paddingLeft = "50px";
+    // scoreLabel.paddingBottom = "40px";
+    panel.addControl(scoreLabel);
+
+
+    var scoreText = new BABYLON.GUI.TextBlock("scoreText", score);
+    scoreText.widthInPixels = 300;
+    scoreText.heightInPixels = 100;
+    scoreText.fontSizeInPixels = 60;
+    scoreText.color = "white";
+    scoreText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    scoreText.left = 120;
+    // scoreText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
+    // scoreText.paddingLeft = "150px";
+     scoreText.paddingBottom = "190px";
+    panel.addControl(scoreText);
 			
 			    var colorPlanes = [];
 			
