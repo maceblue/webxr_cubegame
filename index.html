@@ -145,6 +145,37 @@
 			            framecount = 0;
 			        }
 			    }
+
+				function renew_color_for_mesh(mesh) {
+					mesh.material = getRandomColor();
+				}
+
+				function handle_matches_found(matches) {
+					for (let i = 0; i <= matches.length; i++) {
+						matches[i].animations = []
+						matches_animation = create_matches_animation(matches[i])
+						matches[i].animations.push(matches_animation)
+						a = scene.beginAnimation(matches[i], 0, 20, false)
+						a.onAnimationEnd = renew_color_for_mesh(matches[i])
+					}
+				}
+
+				function create_matches_animation(mesh) {
+					var animation = new BABYLON.Animation("MatchAnimation", "color", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+			        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			        var keys = [];
+			        keys.push({
+			            frame: 0,
+			            value: mesh.material.color // position is Vector3
+			        });
+			        keys.push({
+			            frame: 20,
+			            value: new BABYLON.Color3(0, 0, 0)
+			        });
+			        animation.setKeys(keys);
+
+					return animation
+				}
 			       
 			    function swap_meshes(mesh1, mesh2) {
 			        mesh1.animations = []
@@ -446,6 +477,8 @@
 			                return
 			            }
 			        }
+					handle_matches_found(matches3)
+					matches3 = []
 			    }
 			
 			    // rotation with mouse
