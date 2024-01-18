@@ -151,6 +151,7 @@
 				}
 
 				function handle_matches_found(matches) {
+					console.log(matches)
 					for (let i = 0; i <= matches.length; i++) {
 						matches_animation = create_matches_animation(matches[i])
 						matches[i].animations.push(matches_animation)
