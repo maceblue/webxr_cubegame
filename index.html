@@ -418,6 +418,7 @@
 			
 			    var matches3 = []
 			    var matches = function () {
+				matches3 = []
 			        for (var i=0; i<colorPlanes.length; i++) {
 			            var mesh = colorPlanes[i];
 			            if (matches3.includes(mesh)) {
@@ -473,12 +474,12 @@
 			                set_selected(mesh1)
 			                set_selected(mesh2)
 			                set_selected(mesh3)
-			
+
+					handle_matches_found(matches3)
+					
 			                return
 			            }
 			        }
-					handle_matches_found(matches3)
-					matches3 = []
 			    }
 			
 			    // rotation with mouse
