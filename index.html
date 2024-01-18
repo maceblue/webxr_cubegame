@@ -161,12 +161,12 @@
 				}
 
 				function create_matches_animation(mesh) {
-					var animation = new BABYLON.Animation("MatchAnimation", "color", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+					var animation = new BABYLON.Animation("MatchAnimation", "material.emissiveColor", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
 			        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
 			        var keys = [];
 			        keys.push({
 			            frame: 0,
-			            value: mesh.material.color // position is Vector3
+			            value: mesh.material.emissiveColor
 			        });
 			        keys.push({
 			            frame: 20,
