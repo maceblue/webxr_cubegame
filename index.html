@@ -156,17 +156,17 @@
 						matches_animation = create_matches_animation(matches[i])
 						matches[i].animations.push(matches_animation)
 						a = scene.beginAnimation(matches[i], 0, 20, false)
-						a.onAnimationEnd = renew_color_for_mesh(matches[i])
+						a.onAnimationEnd = renew_color_for_mesh(matches[i].material.emissiveColor)
 					}
 				}
 
-				function create_matches_animation(mesh) {
+				function create_matches_animation(color) {
 					var animation = new BABYLON.Animation("MatchAnimation", "material.emissiveColor", 100, BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
 			        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
 			        var keys = [];
 			        keys.push({
 			            frame: 0,
-			            value: mesh.material.emissiveColor
+			            value: color
 			        });
 			        keys.push({
 			            frame: 20,
@@ -464,10 +464,10 @@
 			            ) {
 			                // now we have 3 planes next to each other with same color and same direction, check more
 			                mesh3 = colorPlanes[i]
-			                console.log('direction',direction)
+			                /*console.log('direction',direction)
 			                console.log('mesh1', mesh1.position)
 			                console.log('mesh2', mesh2.position)
-			                console.log('mesh3', mesh3.position)
+			                console.log('mesh3', mesh3.position)*/
 			                matches3.push(mesh1)
 			                matches3.push(mesh2)
 			                matches3.push(mesh3)
@@ -475,7 +475,7 @@
 			                set_selected(mesh2)
 			                set_selected(mesh3)
 
-					handle_matches_found(matches3)
+							handle_matches_found([mesh1, mesh2, mesh3])
 					
 			                return
 			            }
