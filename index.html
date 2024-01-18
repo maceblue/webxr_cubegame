@@ -103,6 +103,7 @@
 			    cubeGroup.position.z = 30;
 
 				var score = 0;
+				var start_count = false;
 
                 // GUI
     var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
@@ -205,6 +206,7 @@
 				}
 			       
 			    function swap_meshes(mesh1, mesh2) {
+				    start_count = true
 			        mesh1.animations = []
 			        mesh2.animations = []
 			        mesh1.animations = create_swap_animations(mesh1, mesh2.position, mesh2.rotation)
@@ -467,6 +469,9 @@
 
                 function handle_matches_found(matches_found) {
 					//console.log(matches)
+			if (start_count) {
+				score += 1;
+			}
                     
 					for (let i = 0; i <= matches_found.length; i++) {
                         if (typeof matches_found[i] == 'undefined') continue
