@@ -61,7 +61,7 @@
 	        var scene = null;
 	        var sceneToRender = null;
 	        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-	        const CUBE_SIZE = 4
+const CUBE_SIZE = 4
 const CUBE_SCALING = 1.5
 const PLANE_SPACE = 0.1
 const pi = Math.PI; //for rotation
@@ -106,54 +106,32 @@ var createScene = async function () {
     var start_count = false;
 
     // GUI
-    var plane = BABYLON.Mesh.CreatePlane("guiplane", 10);
+    var plane = BABYLON.MeshBuilder.CreatePlane("GUIPlane", {
+        width:20, height:20
+        }
+    )
     plane.position.y = 30;
     plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
-    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
-    var scoreText = BABYLON.GUI.Button.CreateSimpleButton("but1", score);
-    scoreText.width = 150;
-    scoreText.height = 3;
-    scoreText.color = "white";
-    scoreText.fontSize = 250;
-    scoreText.background = "green";
-    advancedTexture.addControl(scoreText);
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane, 800*plane.scaling.x, 800*plane.scaling.y);
 
+    const container = new BABYLON.GUI.Rectangle();
+    container.thickness = 0;
+    container.background = 'green';
+    container.isHitTestVisible = false;
+    container.heightInPixels = 170;
 
+    const scoreText = new BABYLON.GUI.TextBlock();
+    scoreText.textWrapping = true;
+    scoreText.isHitTestVisible = false;
+    scoreText.text = "Score: 0";
+    scoreText.color = "white"
+    scoreText.fontSize = 100;
 
-    /*var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    var panel = new BABYLON.GUI.StackPanel();   
-    panel.name = "mainVertStack";
-    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
-     panel.widthInPixels = 600;
-    // panel.heightInPixels = 200;
-    advancedTexture.addControl(panel);  
-    var scoreLabel = new BABYLON.GUI.TextBlock("scoreLabel", "Score:");
-    scoreLabel.widthInPixels = 300;
-    scoreLabel.heightInPixels = 100;
-    scoreLabel.fontSizeInPixels = 60;
-    scoreLabel.color = "white";
-    scoreLabel.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    // scoreLabel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    scoreLabel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
-    scoreLabel.paddingLeft = "50px";
-    // scoreLabel.paddingBottom = "40px";
-    panel.addControl(scoreLabel);
+    container.addControl(scoreText);
+    advancedTexture.addControl(container);
 
-
-    var scoreText = new BABYLON.GUI.TextBlock("scoreText", score);
-    scoreText.widthInPixels = 300;
-    scoreText.heightInPixels = 100;
-    scoreText.fontSizeInPixels = 60;
-    scoreText.color = "white";
-    scoreText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    scoreText.left = 120;
-    // scoreText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; 
-    // scoreText.paddingLeft = "150px";
-     scoreText.paddingBottom = "190px";
-    panel.addControl(scoreText);*/
-
+    
     var colorPlanes = [];
 
     // rotation smoothness (keep this for later re-implementation)
@@ -486,8 +464,7 @@ var createScene = async function () {
         //console.log(matches)
         if (start_count) {
             score += 1;
-            //scoreText.text = score
-            scoreText.textBlock.text = score
+            scoreText.text = "Score: " + score
         }
 
         for (let i = 0; i <= matches_found.length; i++) {
