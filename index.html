@@ -568,6 +568,23 @@ var createScene = async function () {
 
 
     // WebXR immersive stuff
+const customSelectionMeshGenerator = () => {
+            const radius = 0.05;
+            const thickness = 0.05;
+            const tessellation = 32;
+            const ring = BABYLON.MeshBuilder.CreateTorus(
+                "selectionRing",
+                {
+                    diameter: radius * 2,
+                    thickness,
+                    tessellation,
+                },
+                scene
+            );
+
+            ring.isPickable = false;
+            return ring;
+    }
     var xrHelper = await scene.createDefaultXRExperienceAsync({
         uiOptions: {
             sessionMode: "immersive-vr",
@@ -575,6 +592,23 @@ var createScene = async function () {
         },
         optionalFeatures: true,
         disableTeleportation: true,
+	pointerSelectionOptions: {
+        	customSelectionMeshGenerator: customSelectionMeshGenerator,
+                    // 自定义激光指针网格生成器方法
+                // customLasterPointerMeshGenerator: customLaserPointerMeshGenerator
+        }
+	    xrHelper.pointerSelection.displayLaserPointer = true; // 启用光线指针
+            // xrHelper.pointerSelection.laserPointerDefaultLength = 10; // 光线长度
+            xrHelper.pointerSelection.laserPointerDefaultColor = new BABYLON.Color3(1, 0, 0); // （Color3 对象）：激光指针的默认颜色。
+
+            xrHelper.pointerSelection.disablePointerLighting = true; //布尔值）：禁用激光指针的光照效果，以使其始终可见。
+            xrHelper.pointerSelection.disableSelectionMeshLighting = true; //（布尔值）：禁用选择网格的光照效果，以使其始终可见。
+            
+            xrHelper.pointerSelection.laserPointerPickedColor = new BABYLON.Color3(0, 1, 0); // （Color3 对象）：在选择触发时，将此颜色设置为激光指针的颜色。
+
+            xrHelper.pointerSelection.selectionMeshDefaultColor = new BABYLON.Color3(0, 1, 1); //（Color3 对象）：选择网格的默认颜色。
+            xrHelper.pointerSelection.selectionMeshPickedColor = new BABYLON.Color3(1, 1, 0); //（Color3 对象）：在选择触发时，将此颜色应用于选择网格。
+
     });
 
 
