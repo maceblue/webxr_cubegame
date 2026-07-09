@@ -117,9 +117,9 @@
             }
 
             // --- GUI SETUP ---
-            // 1. Score & Timer UI (Oben)
+            // 1. Score & Timer UI (Nach unten versetzt von 42 auf 34)
             const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 35, height: 15 }, scene);
-            scorePlane.position.set(0, 42, 0);
+            scorePlane.position.set(0, 34, 0);
             scorePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
             
             const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(scorePlane, 700, 300);
@@ -155,36 +155,55 @@
             progressBar.height = "100%";
             progressBar.cornerRadius = 8;
             progressBar.thickness = 0;
-            progressBar.background = "linear-gradient(90deg, #ffe066, #d4af37)"; // Goldener Verlauf
+            progressBar.background = "#00ff66"; // Startet in strahlendem Grün
             progressBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             progressTrack.addControl(progressBar);
 
-            // 2. New Game UI (Unten) - Startet unsichtbar
+            // 2. Modern New Game UI (Unten) - Startet unsichtbar
             const menuPlane = BABYLON.MeshBuilder.CreatePlane("menuPlane", { width: 30, height: 10 }, scene);
-            menuPlane.position.set(0, -42, 0);
+            menuPlane.position.set(0, -36, 0);
             menuPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
             menuPlane.setEnabled(false); // Ausblenden zu Beginn
 
             const menuTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(menuPlane, 600, 200);
             const newGameBtn = BABYLON.GUI.Button.CreateSimpleButton("newGameBtn", "New Game");
-            newGameBtn.width = "70%";
-            newGameBtn.height = "70px";
+            newGameBtn.width = "65%";
+            newGameBtn.height = "75px";
             newGameBtn.color = "white";
-            newGameBtn.fontSize = 40;
-            newGameBtn.background = "#d4af37";
-            newGameBtn.cornerRadius = 10;
-            newGameBtn.thickness = 2;
+            newGameBtn.fontSize = 42;
+            newGameBtn.background = "rgba(10, 10, 16, 0.85)"; // Transparentes Schwarz
+            newGameBtn.color = "#ffffff";
+            newGameBtn.borderColor = "#00f0ff"; // Türkis-Blaue Outline
+            newGameBtn.thickness = 3;
+            newGameBtn.cornerRadius = 12;
+            
             newGameBtn.onPointerUpObservable.add(() => {
                 resetGame();
             });
             menuTexture.addControl(newGameBtn);
 
 
+            // --- HELPER FÜR FARBVERLAUF (Grün -> Gelb -> Rot) ---
+            function getTimerColor(percentage) {
+                let r, g, b = 0;
+                if (percentage > 0.5) {
+                    // Von Grün zu Gelb
+                    r = Math.floor(255 * (1 - percentage) * 2);
+                    g = 255;
+                } else {
+                    // Von Gelb zu Rot
+                    r = 255;
+                    g = Math.floor(255 * (percentage * 2));
+                }
+                // In Hex-String umwandeln für das GUI-System
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+
+
             // --- TIMER LOGIK ---
             scene.registerBeforeRender(() => {
                 if (isGameOver || !start_count) return;
 
-                // Zeit reduzieren basierend auf der vergangenen Frame-Zeit
                 const deltaTime = engine.getDeltaTime() / 1000;
                 timeLeft -= deltaTime;
 
@@ -193,16 +212,12 @@
                     triggerGameOver();
                 }
 
-                // Balkenbreite aktualisieren (Prozentual)
+                // Breite aktualisieren
                 const percentage = timeLeft / TIME_LIMIT;
                 progressBar.width = `${percentage * 100}%`;
 
-                // Farbe des Balkens kritisch rot färben, wenn unter 30%
-                if (percentage < 0.3) {
-                    progressBar.background = "#ff3333";
-                } else {
-                    progressBar.background = "#d4af37";
-                }
+                // Fließender Farbwechsel
+                progressBar.background = getTimerColor(percentage);
             });
 
             function triggerGameOver() {
@@ -222,6 +237,7 @@
                 scoreText.text = "Score: 0";
                 scoreText.color = "white";
                 progressBar.width = "100%";
+                progressBar.background = "#00ff66";
                 menuPlane.setEnabled(false); // Button wieder verstecken
 
                 // Kacheln neu durchmischen
@@ -232,7 +248,6 @@
                     mesh.material = getRandomColor();
                 });
 
-                // Initiale Matches direkt auflösen ohne Punkte zu zählen
                 checkAndResolveMatches();
             }
 
@@ -275,7 +290,7 @@
                     mesh.actionManager = new BABYLON.ActionManager(scene);
                     mesh.actionManager.registerAction(
                         new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (evt) => {
-                            if (isGameOver) return; // Klicks sperren bei Game Over
+                            if (isGameOver) return; 
                             
                             let selected = evt.source;
                             if (mesh.isAnimating) return; 
@@ -330,7 +345,7 @@
             }
 
             function swapMeshes(mesh1, mesh2) {
-                start_count = true; // Timer startet beim ersten aktiven Tausch
+                start_count = true; 
                 mesh1.isAnimating = true;
                 mesh2.isAnimating = true;
 
@@ -362,7 +377,6 @@
                 };
             }
 
-            // Match-Logik
             function checkAndResolveMatches() {
                 if (isGameOver) return;
 
@@ -401,7 +415,7 @@
                     if (start_count) {
                         score += toRemove.size;
                         scoreText.text = "Score: " + score;
-                        timeLeft = TIME_LIMIT; // MATCH GEFUNDEN! Balken wieder komplett auffüllen
+                        timeLeft = TIME_LIMIT; // Balken komplett aufladen
                     }
 
                     toRemove.forEach(mesh => {
@@ -465,7 +479,7 @@
             let dragVelocity = { x: 0, y: 0 };
 
             scene.onPointerObservable.add((pointerInfo) => {
-                if (isGameOver) return; // Keine Rotation mehr erlauben, wenn vorbei
+                if (isGameOver) return; 
 
                 switch (pointerInfo.type) {
                     case BABYLON.PointerEventTypes.POINTERDOWN:
