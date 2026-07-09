@@ -37,6 +37,7 @@
         const CUBE_SCALING = 1.2;
         const PLANE_SPACE = 0.1;
         const pi = Math.PI;
+        const TIME_LIMIT = 10; // Zeitlimit in Sekunden
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
@@ -53,6 +54,13 @@
             // Kamera
             const camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 0, 110), scene);
             camera.setTarget(BABYLON.Vector3.Zero());
+
+            // Globaler Spielstatus
+            let isGameOver = false;
+            let score = 0;
+            let start_count = false;
+            let timeLeft = TIME_LIMIT;
+            const colorPlanes = [];
 
             // Materialien
             const createMaterial = (name, color) => {
@@ -108,29 +116,128 @@
                 }, 600);
             }
 
-            // Score GUI
-            const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 30, height: 10 }, scene);
+            // --- GUI SETUP ---
+            // 1. Score & Timer UI (Oben)
+            const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 35, height: 15 }, scene);
             scorePlane.position.set(0, 42, 0);
             scorePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
             
-            const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(scorePlane, 600, 200);
-            const scoreContainer = new BABYLON.GUI.Rectangle();
-            scoreContainer.thickness = 0;
+            const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(scorePlane, 700, 300);
+            
+            const scoreContainer = new BABYLON.GUI.StackPanel();
+            scoreContainer.width = "100%";
+            scoreContainer.height = "100%";
             scoreContainer.background = "rgba(0, 0, 0, 0.6)";
             scoreContainer.cornerRadius = 15;
+            advancedTexture.addControl(scoreContainer);
             
+            // Score Text
             const scoreText = new BABYLON.GUI.TextBlock();
             scoreText.text = "Score: 0";
             scoreText.color = "white";
-            scoreText.fontSize = 45;
-            
+            scoreText.fontSize = 55;
+            scoreText.height = "120px";
             scoreContainer.addControl(scoreText);
-            advancedTexture.addControl(scoreContainer);
 
-            let score = 0;
-            let start_count = false;
-            const colorPlanes = [];
+            // Ladebalken Container (Hintergrund)
+            const progressTrack = new BABYLON.GUI.Rectangle();
+            progressTrack.width = "80%";
+            progressTrack.height = "25px";
+            progressTrack.cornerRadius = 10;
+            progressTrack.color = "#222230";
+            progressTrack.thickness = 2;
+            progressTrack.background = "#12121a";
+            scoreContainer.addControl(progressTrack);
 
+            // Der eigentliche, schrumpfende Ladebalken
+            const progressBar = new BABYLON.GUI.Rectangle();
+            progressBar.width = "100%";
+            progressBar.height = "100%";
+            progressBar.cornerRadius = 8;
+            progressBar.thickness = 0;
+            progressBar.background = "linear-gradient(90deg, #ffe066, #d4af37)"; // Goldener Verlauf
+            progressBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            progressTrack.addControl(progressBar);
+
+            // 2. New Game UI (Unten) - Startet unsichtbar
+            const menuPlane = BABYLON.MeshBuilder.CreatePlane("menuPlane", { width: 30, height: 10 }, scene);
+            menuPlane.position.set(0, -42, 0);
+            menuPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+            menuPlane.setEnabled(false); // Ausblenden zu Beginn
+
+            const menuTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(menuPlane, 600, 200);
+            const newGameBtn = BABYLON.GUI.Button.CreateSimpleButton("newGameBtn", "New Game");
+            newGameBtn.width = "70%";
+            newGameBtn.height = "70px";
+            newGameBtn.color = "white";
+            newGameBtn.fontSize = 40;
+            newGameBtn.background = "#d4af37";
+            newGameBtn.cornerRadius = 10;
+            newGameBtn.thickness = 2;
+            newGameBtn.onPointerUpObservable.add(() => {
+                resetGame();
+            });
+            menuTexture.addControl(newGameBtn);
+
+
+            // --- TIMER LOGIK ---
+            scene.registerBeforeRender(() => {
+                if (isGameOver || !start_count) return;
+
+                // Zeit reduzieren basierend auf der vergangenen Frame-Zeit
+                const deltaTime = engine.getDeltaTime() / 1000;
+                timeLeft -= deltaTime;
+
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    triggerGameOver();
+                }
+
+                // Balkenbreite aktualisieren (Prozentual)
+                const percentage = timeLeft / TIME_LIMIT;
+                progressBar.width = `${percentage * 100}%`;
+
+                // Farbe des Balkens kritisch rot färben, wenn unter 30%
+                if (percentage < 0.3) {
+                    progressBar.background = "#ff3333";
+                } else {
+                    progressBar.background = "#d4af37";
+                }
+            });
+
+            function triggerGameOver() {
+                isGameOver = true;
+                scoreText.text = "GAME OVER\nFinal Score: " + score;
+                scoreText.color = "#ff3333";
+                progressBar.width = "0%";
+                menuPlane.setEnabled(true); // "New Game" Button anzeigen
+            }
+
+            function resetGame() {
+                score = 0;
+                timeLeft = TIME_LIMIT;
+                isGameOver = false;
+                start_count = false;
+                
+                scoreText.text = "Score: 0";
+                scoreText.color = "white";
+                progressBar.width = "100%";
+                menuPlane.setEnabled(false); // Button wieder verstecken
+
+                // Kacheln neu durchmischen
+                colorPlanes.forEach(mesh => {
+                    deselectMesh(mesh);
+                    mesh.isAnimating = false;
+                    mesh.scaling.set(1, 1, 1);
+                    mesh.material = getRandomColor();
+                });
+
+                // Initiale Matches direkt auflösen ohne Punkte zu zählen
+                checkAndResolveMatches();
+            }
+
+
+            // --- SPIEL-KACHELN GENERIEREN ---
             const createPlane = (name, position, rotation) => {
                 const plane = BABYLON.MeshBuilder.CreatePlane(name, { size: CUBE_SIZE }, scene);
                 plane.position = position;
@@ -168,6 +275,8 @@
                     mesh.actionManager = new BABYLON.ActionManager(scene);
                     mesh.actionManager.registerAction(
                         new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (evt) => {
+                            if (isGameOver) return; // Klicks sperren bei Game Over
+                            
                             let selected = evt.source;
                             if (mesh.isAnimating) return; 
 
@@ -221,7 +330,7 @@
             }
 
             function swapMeshes(mesh1, mesh2) {
-                start_count = true;
+                start_count = true; // Timer startet beim ersten aktiven Tausch
                 mesh1.isAnimating = true;
                 mesh2.isAnimating = true;
 
@@ -253,14 +362,16 @@
                 };
             }
 
-            // Match-Logik (Bereit für unendliche Combos)
+            // Match-Logik
             function checkAndResolveMatches() {
+                if (isGameOver) return;
+
                 let toRemove = new Set();
                 const threshold = 0.2;
 
                 for (let i = 0; i < colorPlanes.length; i++) {
                     let m1 = colorPlanes[i];
-                    if (m1.isAnimating) continue; // Überspringt Kacheln, die GERADE im Moment explodieren
+                    if (m1.isAnimating) continue; 
                     
                     let groupX = [m1];
                     let groupY = [m1];
@@ -290,6 +401,7 @@
                     if (start_count) {
                         score += toRemove.size;
                         scoreText.text = "Score: " + score;
+                        timeLeft = TIME_LIMIT; // MATCH GEFUNDEN! Balken wieder komplett auffüllen
                     }
 
                     toRemove.forEach(mesh => {
@@ -319,9 +431,6 @@
                             }
 
                             mesh.renderOverlay = false;
-                            
-                            // WICHTIGER FIX: Wir schalten die Animationssperre FREI, sobald die Farbe neu ist!
-                            // So kann der zeitversetzte `checkAndResolveMatches`-Loop diese Kachel sofort wieder matchen.
                             mesh.isAnimating = false;
 
                             let animRespawn = new BABYLON.Animation("respawnAnim", "scaling", 60, BABYLON.Animation.ANIMATIONTYPE_VECTOR3);
@@ -334,7 +443,6 @@
                         };
                     });
 
-                    // Ruft den Check auf. Nach 550ms sind die neuen Farben da und voll matchbereit
                     setTimeout(() => { checkAndResolveMatches(); }, 550);
                 }
             }
@@ -357,6 +465,8 @@
             let dragVelocity = { x: 0, y: 0 };
 
             scene.onPointerObservable.add((pointerInfo) => {
+                if (isGameOver) return; // Keine Rotation mehr erlauben, wenn vorbei
+
                 switch (pointerInfo.type) {
                     case BABYLON.PointerEventTypes.POINTERDOWN:
                         if (pointerInfo.pickInfo.hit && colorPlanes.includes(pointerInfo.pickInfo.pickedMesh)) {
