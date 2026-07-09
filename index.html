@@ -3,11 +3,8 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>WebXR CubeGame - Endless Combo Chains Fixed</title>
-    <!-- 1. Das Icon für die Browser-Adresszeile und Tabs -->
+    <title>WebXR CubeGame - Dynamic Difficulty</title>
     <link rel="icon" type="image/png" href="favicon.png" sizes="32x32">
-
-    <!-- 2. Das Icon für den iPhone-Homescreen -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
@@ -37,13 +34,13 @@
         const CUBE_SCALING = 1.2;
         const PLANE_SPACE = 0.1;
         const pi = Math.PI;
-        const TIME_LIMIT = 10; // Zeitlimit in Sekunden
+        
+        const START_TIME_LIMIT = 15; // Neues Start-Zeitlimit
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color3(0.06, 0.06, 0.09);
 
-            // Licht-Setup
             const lightTop = new BABYLON.HemisphericLight("lightTop", new BABYLON.Vector3(0, 1, 0.5), scene);
             lightTop.intensity = 0.85;
             const lightBottom = new BABYLON.HemisphericLight("lightBottom", new BABYLON.Vector3(0, -1, -0.5), scene);
@@ -51,7 +48,6 @@
             const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -1, -1), scene);
             dirLight.intensity = 0.4;
 
-            // Kamera
             const camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 0, 110), scene);
             camera.setTarget(BABYLON.Vector3.Zero());
 
@@ -59,7 +55,8 @@
             let isGameOver = false;
             let score = 0;
             let start_count = false;
-            let timeLeft = TIME_LIMIT;
+            let currentTimeLimit = START_TIME_LIMIT; 
+            let timeLeft = START_TIME_LIMIT;
             const colorPlanes = [];
 
             // Materialien
@@ -102,78 +99,81 @@
             function triggerMatchExplosion(mesh, color) {
                 const dummy = new BABYLON.AbstractMesh("dummy", scene);
                 dummy.position = mesh.absolutePosition.clone();
-                
                 const sys = particleSystem.clone("burst_" + mesh.name, dummy);
                 sys.color1 = BABYLON.Color4.FromColor3(color, 1.0);
                 sys.color2 = BABYLON.Color4.FromColor3(color, 0.5);
                 sys.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
                 sys.manualEmitCount = 25; 
                 sys.start();
-                
-                setTimeout(() => {
-                    sys.dispose();
-                    dummy.dispose();
-                }, 600);
+                setTimeout(() => { sys.dispose(); dummy.dispose(); }, 600);
             }
 
             // --- GUI SETUP ---
-            // 1. Score & Timer UI (Nach unten versetzt von 42 auf 34)
-            const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 35, height: 15 }, scene);
+            // 1. Score & Timer UI (Optimierter Grid-Aufbau für saubere Zentrierung)
+            const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 36, height: 16 }, scene);
             scorePlane.position.set(0, 34, 0);
             scorePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
             
-            const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(scorePlane, 700, 300);
+            const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(scorePlane, 720, 320);
             
-            const scoreContainer = new BABYLON.GUI.StackPanel();
-            scoreContainer.width = "100%";
-            scoreContainer.height = "100%";
-            scoreContainer.background = "rgba(0, 0, 0, 0.6)";
-            scoreContainer.cornerRadius = 15;
-            advancedTexture.addControl(scoreContainer);
+            const mainContainer = new BABYLON.GUI.Rectangle();
+            mainContainer.width = "100%";
+            mainContainer.height = "100%";
+            mainContainer.background = "rgba(0, 0, 0, 0.65)";
+            mainContainer.cornerRadius = 20;
+            mainContainer.thickness = 0;
+            advancedTexture.addControl(mainContainer);
+
+            const scoreGrid = new BABYLON.GUI.Grid();
+            scoreGrid.addColumnDefinition(1.0);
+            scoreGrid.addRowDefinition(0.65); // Reihe 1 für Text
+            scoreGrid.addRowDefinition(0.35); // Reihe 2 für Ladebalken
+            mainContainer.addControl(scoreGrid);
             
             // Score Text
             const scoreText = new BABYLON.GUI.TextBlock();
             scoreText.text = "Score: 0";
             scoreText.color = "white";
-            scoreText.fontSize = 55;
-            scoreText.height = "120px";
-            scoreContainer.addControl(scoreText);
+            scoreText.fontSize = 52;
+            scoreText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+            scoreText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+            scoreGrid.addControl(scoreText, 0, 0);
 
-            // Ladebalken Container (Hintergrund)
+            // Ladebalken Container
             const progressTrack = new BABYLON.GUI.Rectangle();
             progressTrack.width = "80%";
-            progressTrack.height = "25px";
-            progressTrack.cornerRadius = 10;
+            progressTrack.height = "24px";
+            progressTrack.cornerRadius = 12;
             progressTrack.color = "#222230";
             progressTrack.thickness = 2;
             progressTrack.background = "#12121a";
-            scoreContainer.addControl(progressTrack);
+            progressTrack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+            scoreGrid.addControl(progressTrack, 1, 0);
 
-            // Der eigentliche, schrumpfende Ladebalken
+            // Der eigentliche Ladebalken
             const progressBar = new BABYLON.GUI.Rectangle();
             progressBar.width = "100%";
             progressBar.height = "100%";
-            progressBar.cornerRadius = 8;
+            progressBar.cornerRadius = 10;
             progressBar.thickness = 0;
-            progressBar.background = "#00ff66"; // Startet in strahlendem Grün
+            progressBar.background = "#00ff66";
             progressBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             progressTrack.addControl(progressBar);
 
-            // 2. Modern New Game UI (Unten) - Startet unsichtbar
+            // 2. Modern New Game UI (Unten)
             const menuPlane = BABYLON.MeshBuilder.CreatePlane("menuPlane", { width: 30, height: 10 }, scene);
             menuPlane.position.set(0, -36, 0);
             menuPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-            menuPlane.setEnabled(false); // Ausblenden zu Beginn
+            menuPlane.setEnabled(false);
 
             const menuTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(menuPlane, 600, 200);
             const newGameBtn = BABYLON.GUI.Button.CreateSimpleButton("newGameBtn", "New Game");
             newGameBtn.width = "65%";
             newGameBtn.height = "75px";
-            newGameBtn.color = "white";
             newGameBtn.fontSize = 42;
-            newGameBtn.background = "rgba(10, 10, 16, 0.85)"; // Transparentes Schwarz
-            newGameBtn.color = "#ffffff";
-            newGameBtn.borderColor = "#00f0ff"; // Türkis-Blaue Outline
+            newGameBtn.background = "rgba(10, 10, 16, 0.85)"; 
+            newGameBtn.color = "#00f0ff"; // Schriftfarbe passend in Türkis
+            newGameBtn.borderColor = "#00f0ff"; // Rein Türkis-Blaue Outline
             newGameBtn.thickness = 3;
             newGameBtn.cornerRadius = 12;
             
@@ -183,22 +183,26 @@
             menuTexture.addControl(newGameBtn);
 
 
+            // --- DYNAMISCHE SCHWIERIGKEITSKURVE ---
+            function updateDynamicTimeLimit() {
+                // Verringert das Limit um 0.4 Sek pro erzieltem Punkt
+                let reduction = score * 0.4;
+                // Garantiert, dass das Spiel nie unter 4 Sekunden absinkt
+                currentTimeLimit = Math.max(4, START_TIME_LIMIT - reduction);
+            }
+
             // --- HELPER FÜR FARBVERLAUF (Grün -> Gelb -> Rot) ---
             function getTimerColor(percentage) {
                 let r, g, b = 0;
                 if (percentage > 0.5) {
-                    // Von Grün zu Gelb
                     r = Math.floor(255 * (1 - percentage) * 2);
                     g = 255;
                 } else {
-                    // Von Gelb zu Rot
                     r = 255;
                     g = Math.floor(255 * (percentage * 2));
                 }
-                // In Hex-String umwandeln für das GUI-System
                 return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
             }
-
 
             // --- TIMER LOGIK ---
             scene.registerBeforeRender(() => {
@@ -212,11 +216,8 @@
                     triggerGameOver();
                 }
 
-                // Breite aktualisieren
-                const percentage = timeLeft / TIME_LIMIT;
+                const percentage = timeLeft / currentTimeLimit;
                 progressBar.width = `${percentage * 100}%`;
-
-                // Fließender Farbwechsel
                 progressBar.background = getTimerColor(percentage);
             });
 
@@ -225,12 +226,13 @@
                 scoreText.text = "GAME OVER\nFinal Score: " + score;
                 scoreText.color = "#ff3333";
                 progressBar.width = "0%";
-                menuPlane.setEnabled(true); // "New Game" Button anzeigen
+                menuPlane.setEnabled(true); 
             }
 
             function resetGame() {
                 score = 0;
-                timeLeft = TIME_LIMIT;
+                currentTimeLimit = START_TIME_LIMIT;
+                timeLeft = START_TIME_LIMIT;
                 isGameOver = false;
                 start_count = false;
                 
@@ -238,9 +240,8 @@
                 scoreText.color = "white";
                 progressBar.width = "100%";
                 progressBar.background = "#00ff66";
-                menuPlane.setEnabled(false); // Button wieder verstecken
+                menuPlane.setEnabled(false); 
 
-                // Kacheln neu durchmischen
                 colorPlanes.forEach(mesh => {
                     deselectMesh(mesh);
                     mesh.isAnimating = false;
@@ -250,7 +251,6 @@
 
                 checkAndResolveMatches();
             }
-
 
             // --- SPIEL-KACHELN GENERIEREN ---
             const createPlane = (name, position, rotation) => {
@@ -415,7 +415,10 @@
                     if (start_count) {
                         score += toRemove.size;
                         scoreText.text = "Score: " + score;
-                        timeLeft = TIME_LIMIT; // Balken komplett aufladen
+                        
+                        // Schwierigkeit anpassen und Zeitlimit neu berechnen
+                        updateDynamicTimeLimit();
+                        timeLeft = currentTimeLimit; // Balken auf das neue, dynamische Limit aufladen
                     }
 
                     toRemove.forEach(mesh => {
@@ -537,7 +540,7 @@
                                 cubeGroup.position.set(0, 0, 15); 
                             }
                         });
-                    }).catch(err => console.log("XR-Error abgefangen:", err));
+                    }).catch(err => console.log("XR-Error:", err));
                 }
             } catch (e) {
                 console.log("WebXR wird nicht unterstützt.");
