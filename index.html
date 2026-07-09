@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>WebXR CubeGame - Dynamic Difficulty</title>
+    <title>WebXR CubeGame - Balanced Difficulty</title>
     <link rel="icon" type="image/png" href="favicon.png" sizes="32x32">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -35,7 +35,7 @@
         const PLANE_SPACE = 0.1;
         const pi = Math.PI;
         
-        const START_TIME_LIMIT = 15; // Neues Start-Zeitlimit
+        const START_TIME_LIMIT = 20; // Auf 20 Sekunden erhöht
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
@@ -109,7 +109,7 @@
             }
 
             // --- GUI SETUP ---
-            // 1. Score & Timer UI (Optimierter Grid-Aufbau für saubere Zentrierung)
+            // 1. Score & Timer UI
             const scorePlane = BABYLON.MeshBuilder.CreatePlane("scorePlane", { width: 36, height: 16 }, scene);
             scorePlane.position.set(0, 34, 0);
             scorePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
@@ -126,8 +126,8 @@
 
             const scoreGrid = new BABYLON.GUI.Grid();
             scoreGrid.addColumnDefinition(1.0);
-            scoreGrid.addRowDefinition(0.65); // Reihe 1 für Text
-            scoreGrid.addRowDefinition(0.35); // Reihe 2 für Ladebalken
+            scoreGrid.addRowDefinition(0.65); 
+            scoreGrid.addRowDefinition(0.35); 
             mainContainer.addControl(scoreGrid);
             
             // Score Text
@@ -172,8 +172,8 @@
             newGameBtn.height = "75px";
             newGameBtn.fontSize = 42;
             newGameBtn.background = "rgba(10, 10, 16, 0.85)"; 
-            newGameBtn.color = "#00f0ff"; // Schriftfarbe passend in Türkis
-            newGameBtn.borderColor = "#00f0ff"; // Rein Türkis-Blaue Outline
+            newGameBtn.color = "#ffffff"; // Schriftfarbe korrigiert auf reines Weiß
+            newGameBtn.borderColor = "#00f0ff"; // Türkise Outline beibehalten
             newGameBtn.thickness = 3;
             newGameBtn.cornerRadius = 12;
             
@@ -183,12 +183,12 @@
             menuTexture.addControl(newGameBtn);
 
 
-            // --- DYNAMISCHE SCHWIERIGKEITSKURVE ---
+            // --- BALANCIERTE SCHWIERIGKEITSKURVE ---
             function updateDynamicTimeLimit() {
-                // Verringert das Limit um 0.4 Sek pro erzieltem Punkt
-                let reduction = score * 0.4;
-                // Garantiert, dass das Spiel nie unter 4 Sekunden absinkt
-                currentTimeLimit = Math.max(4, START_TIME_LIMIT - reduction);
+                // Verringert das Limit viel langsamer (nur um 0.15 Sek pro Punkt statt 0.4)
+                let reduction = score * 0.15;
+                // Garantiert, dass das Spiel nie unter faire 5 Sekunden absinkt
+                currentTimeLimit = Math.max(5, START_TIME_LIMIT - reduction);
             }
 
             // --- HELPER FÜR FARBVERLAUF (Grün -> Gelb -> Rot) ---
@@ -416,9 +416,8 @@
                         score += toRemove.size;
                         scoreText.text = "Score: " + score;
                         
-                        // Schwierigkeit anpassen und Zeitlimit neu berechnen
                         updateDynamicTimeLimit();
-                        timeLeft = currentTimeLimit; // Balken auf das neue, dynamische Limit aufladen
+                        timeLeft = currentTimeLimit; 
                     }
 
                     toRemove.forEach(mesh => {
