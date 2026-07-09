@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>WebXR CubeGame - Balanced Difficulty</title>
+    <title>WebXR CubeGame - Balanced Casual Difficulty</title>
     <link rel="icon" type="image/png" href="favicon.png" sizes="32x32">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -35,7 +35,7 @@
         const PLANE_SPACE = 0.1;
         const pi = Math.PI;
         
-        const START_TIME_LIMIT = 20; // Auf 20 Sekunden erhöht
+        const START_TIME_LIMIT = 30; // Auf 30 Sekunden erhöht für entspanntes Gameplay
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
@@ -167,15 +167,23 @@
             menuPlane.setEnabled(false);
 
             const menuTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(menuPlane, 600, 200);
-            const newGameBtn = BABYLON.GUI.Button.CreateSimpleButton("newGameBtn", "New Game");
+            
+            // Button Container (Erstellt die Form und die türkise Umrandung separat)
+            const newGameBtn = new BABYLON.GUI.Button("newGameBtn");
             newGameBtn.width = "65%";
             newGameBtn.height = "75px";
-            newGameBtn.fontSize = 42;
             newGameBtn.background = "rgba(10, 10, 16, 0.85)"; 
-            newGameBtn.color = "#ffffff"; // Schriftfarbe korrigiert auf reines Weiß
-            newGameBtn.borderColor = "#00f0ff"; // Türkise Outline beibehalten
+            newGameBtn.color = "#00f0ff";       // Fix: Garantiert die türkise Outline-Farbe
+            newGameBtn.borderColor = "#00f0ff"; // Knallig Türkise Outline
             newGameBtn.thickness = 3;
             newGameBtn.cornerRadius = 12;
+            
+            // Text als eigenständiges Child, damit die Farbe unabhängig von der Border bleibt
+            const btnText = new BABYLON.GUI.TextBlock();
+            btnText.text = "New Game";
+            btnText.color = "#ffffff";          // Garantiert rein weiße Schrift
+            btnText.fontSize = 42;
+            newGameBtn.addControl(btnText);
             
             newGameBtn.onPointerUpObservable.add(() => {
                 resetGame();
@@ -183,12 +191,12 @@
             menuTexture.addControl(newGameBtn);
 
 
-            // --- BALANCIERTE SCHWIERIGKEITSKURVE ---
+            // --- ENTSPANNTE SCHWIERIGKEITSKURVE ---
             function updateDynamicTimeLimit() {
-                // Verringert das Limit viel langsamer (nur um 0.15 Sek pro Punkt statt 0.4)
-                let reduction = score * 0.15;
-                // Garantiert, dass das Spiel nie unter faire 5 Sekunden absinkt
-                currentTimeLimit = Math.max(5, START_TIME_LIMIT - reduction);
+                // Deutlich langsamerer Zeitabzug von nur 0.05 Sek pro erzieltem Punkt
+                let reduction = score * 0.05;
+                // Minimale Schmerzgrenze auf faire 6 Sekunden gesetzt
+                currentTimeLimit = Math.max(6, START_TIME_LIMIT - reduction);
             }
 
             // --- HELPER FÜR FARBVERLAUF (Grün -> Gelb -> Rot) ---
