@@ -401,6 +401,7 @@
                 mesh.renderOutline = true;
                 mesh.outlineWidth = 0.4;
                 mesh.outlineColor = new BABYLON.Color3(1, 1, 1);
+                playSelectSound();
             }
 
             function deselectMesh(mesh) {
@@ -408,6 +409,7 @@
                 mesh.scaling.set(1.0, 1.0, 1.0);
                 mesh.renderOverlay = false;
                 mesh.renderOutline = false;
+                playSelectSound();
             }
 
             function isAdjacent(mesh1, mesh2) {
@@ -490,6 +492,8 @@
                         updateDynamicTimeLimit();
                         timeLeft = currentTimeLimit; 
                     }
+
+                    playMatchSound();
 
                     toRemove.forEach(mesh => {
                         mesh.isAnimating = true;
@@ -616,8 +620,34 @@
             audioEl.preload = "auto";
             document.body.appendChild(audioEl);
 
+            const selectSound = document.createElement("audio");
+            selectSound.src = "select.mp3";
+            selectSound.preload = "auto";
+            document.body.appendChild(selectSound);
+
+            const matchSound = document.createElement("audio");
+            matchSound.src = "match.mp3";
+            matchSound.preload = "auto";
+            matchSound.volume = 0.5;
+            document.body.appendChild(matchSound);
+
             let audioStarted = false;
             let audioEnabled = false;
+
+            const playSelectSound = () => {
+                if (selectSound.paused) {
+                    selectSound.currentTime = 0;
+                    selectSound.play().catch(() => {});
+                } else {
+                    const clone = selectSound.cloneNode();
+                    clone.play().catch(() => {});
+                }
+            };
+
+            const playMatchSound = () => {
+                matchSound.currentTime = 0;
+                matchSound.play().catch(() => {});
+            };
 
             const startMusic = async () => {
                 try {
