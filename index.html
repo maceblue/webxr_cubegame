@@ -597,17 +597,9 @@
             try {
                 if (navigator.xr) {
                     scene.createDefaultXRExperienceAsync({ disableTeleportation: true }).then((xr) => {
-                        const soundUrl = "https://maceblue.github.io/webxr_cubegame/quiz-game-music-loop.mp3";
-                        let musicSound;
-                        
                         xr.baseExperience.onStateChangedObservable.add((state) => {
                             if (state === BABYLON.WebXRState.IN_XR) {
-                                if(!musicSound) {
-                                    musicSound = new BABYLON.Sound("Music", soundUrl, scene, null, { loop: true, autoplay: true, volume: 0.3 });
-                                } else {
-                                    musicSound.play();
-                                }
-                                cubeGroup.position.set(0, 0, 15); 
+                                cubeGroup.position.set(0, 0, 15);
                             }
                         });
                     }).catch(err => console.log("XR-Error:", err));
@@ -615,6 +607,57 @@
             } catch (e) {
                 console.log("WebXR wird nicht unterstützt.");
             }
+
+            // === AUDIO ===
+            const soundUrl = "ambient-loop.mp3";
+            let musicSound = null;
+            let audioStarted = false;
+
+            const startMusic = () => {
+                if (!musicSound) {
+                    musicSound = new BABYLON.Sound("Music", soundUrl, scene, () => {
+                        musicSound.play();
+                        audioStarted = true;
+                        updateAudioButton();
+                    }, { loop: true, volume: 0.3, autoplay: false });
+                } else if (musicSound.isReady()) {
+                    musicSound.play();
+                    audioStarted = true;
+                    updateAudioButton();
+                }
+            };
+
+            const stopMusic = () => {
+                if (musicSound) {
+                    musicSound.pause();
+                    audioStarted = false;
+                    updateAudioButton();
+                }
+            };
+
+            const toggleAudio = () => {
+                if (audioStarted) stopMusic();
+                else startMusic();
+            };
+
+            const audioButton = document.createElement("button");
+            audioButton.id = "audioButton";
+            const updateAudioButton = () => {
+                audioButton.textContent = audioStarted ? "🔊 Musik aus" : "🔇 Musik an";
+                audioButton.style.cssText = "position:fixed;top:16px;left:16px;z-index:1000;padding:8px 12px;border-radius:8px;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;font-family:sans-serif;";
+            };
+            audioButton.addEventListener("click", toggleAudio);
+            updateAudioButton();
+            document.body.appendChild(audioButton);
+
+            // Audio auf erster User-Interaktion starten (Browser-Autoplay-Regel)
+            const firstInteraction = () => {
+                startMusic();
+                window.removeEventListener("pointerdown", firstInteraction);
+                window.removeEventListener("keydown", firstInteraction);
+            };
+            window.addEventListener("pointerdown", firstInteraction);
+            window.addEventListener("keydown", firstInteraction);
 
             return scene;
         };
