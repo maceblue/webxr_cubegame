@@ -633,8 +633,10 @@
 
             let audioStarted = false;
             let audioEnabled = false;
+            let sfxEnabled = true;
 
             const playSelectSound = () => {
+                if (!sfxEnabled) return;
                 if (selectSound.paused) {
                     selectSound.currentTime = 0;
                     selectSound.play().catch(() => {});
@@ -645,6 +647,7 @@
             };
 
             const playMatchSound = () => {
+                if (!sfxEnabled) return;
                 matchSound.currentTime = 0;
                 matchSound.play().catch(() => {});
             };
@@ -680,6 +683,19 @@
             audioButton.addEventListener("click", toggleAudio);
             updateAudioButton();
             document.body.appendChild(audioButton);
+
+            const sfxButton = document.createElement("button");
+            sfxButton.id = "sfxButton";
+            const updateSfxButton = () => {
+                sfxButton.textContent = sfxEnabled ? "🔔 SFX aus" : "🔕 SFX an";
+                sfxButton.style.cssText = "position:fixed;top:16px;left:140px;z-index:1000;padding:8px 12px;border-radius:8px;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;font-family:sans-serif;";
+            };
+            sfxButton.addEventListener("click", () => {
+                sfxEnabled = !sfxEnabled;
+                updateSfxButton();
+            });
+            updateSfxButton();
+            document.body.appendChild(sfxButton);
 
             // Audio auf erster User-Interaktion starten (Browser-Autoplay-Regel)
             const firstInteraction = async () => {
